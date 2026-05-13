@@ -1,0 +1,10 @@
+{% extends "_base.html" %}
+{% block title %}Срок ссылки истёк{% endblock %}
+
+{% block content %}
+<div class="alert alert-warning">
+    Срок жизни этой ссылки на результат сравнения истёк.
+    Запустите новый поиск, чтобы получить актуальные данные.
+</div>
+<a href="{{ url_for('index') }}" class="btn btn-primary">К новому поиску</a>
+{% endblock %}

@@ -1,0 +1,138 @@
+{% extends "_base.html" %}
+{% block title %}Сравнение квартир — параметры поиска{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <h1 class="h3 mb-3">Сравнить стоимость квартиры с аналогами на Avito</h1>
+        <p class="text-muted">
+            Введите параметры квартиры, которую вы планируете купить.
+            Приложение соберёт похожие активные объявления в Красноярске
+            (в радиусе 2 км по умолчанию) и покажет сравнительную таблицу.
+        </p>
+
+        {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="{{ url_for('search') }}" class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h5 mb-3">Основные параметры</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Адрес или ориентир квартиры *</label>
+                        <input name="address" class="form-control"
+                               placeholder="ул. 9 Мая, 27 или мкр. Северный"
+                               required>
+                        <div class="form-text">
+                            Используется для геокодирования и расчёта расстояния.
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Район / микрорайон</label>
+                        <select name="district" class="form-select">
+                            <option value="">— не указано —</option>
+                            <optgroup label="Районы">
+                                {% for d in districts %}
+                                <option value="{{ d }}">{{ d }}</option>
+                                {% endfor %}
+                            </optgroup>
+                            <optgroup label="Микрорайоны">
+                                {% for d in micro_districts %}
+                                <option value="{{ d }}">{{ d }}</option>
+                                {% endfor %}
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3">
+                        <label class="form-label">Количество комнат *</label>
+                        <select name="rooms" class="form-select" required>
+                            <option value="">— выберите —</option>
+                            <option value="studio">Студия</option>
+                            <option value="1">1</option>
+                            <option value="2" selected>2</option>
+                            <option value="3">3</option>
+                            <option value="4+">4+</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Общая площадь, м²</label>
+                        <input name="total_area" class="form-control" type="number"
+                               step="0.1" placeholder="54.5">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Площадь кухни, м²</label>
+                        <input name="kitchen_area" class="form-control" type="number"
+                               step="0.1" placeholder="9.0">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Цена объекта, ₽</label>
+                        <input name="price" class="form-control" type="number"
+                               step="1000" placeholder="6500000">
+                    </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                    <div class="col-md-3">
+                        <label class="form-label">Этаж</label>
+                        <input name="floor" class="form-control" type="number" min="1" placeholder="5">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Этажность дома</label>
+                        <input name="floors_total" class="form-control" type="number" min="1" placeholder="9">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Год постройки дома</label>
+                        <input name="build_year" class="form-control" type="number" min="1900" max="2100" placeholder="1995">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h2 class="h6 mb-3 text-muted">Дополнительные фильтры</h2>
+
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            Допустимое расстояние, км
+                            <span class="text-muted small">(шаг 0.5)</span>
+                        </label>
+                        <input name="distance_km" class="form-control" type="number"
+                               step="0.5" min="0.5" max="20"
+                               value="{{ defaults.distance_km }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Допустимое отклонение площади, %</label>
+                        <input name="area_tolerance_pct" class="form-control"
+                               type="number" min="0" max="100"
+                               value="{{ defaults.area_tolerance_pct }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">
+                            Глубина поиска, шт.
+                            <span class="text-muted small">(макс. 20)</span>
+                        </label>
+                        <input name="depth" class="form-control" type="number"
+                               min="5" max="20"
+                               value="{{ defaults.depth }}">
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        🔍 Найти аналоги и сравнить
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <p class="text-muted small mt-3">
+            * — обязательные поля. Парсинг занимает 1–3 минуты:
+            мы соблюдаем «вежливые» задержки между запросами к Avito.
+        </p>
+    </div>
+</div>
+{% endblock %}

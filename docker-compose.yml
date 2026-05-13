@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: krsk-flat-comparator
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data.sqlite3:/app/data.sqlite3
+      - ./app.log:/app/app.log
+    environment:
+      - FLASK_DEBUG=0
+      - PORT=5000
+    restart: unless-stopped

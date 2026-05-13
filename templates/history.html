@@ -1,0 +1,30 @@
+{% extends "_base.html" %}
+{% block title %}История запросов{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Последние 10 запросов</h1>
+
+{% if not rows %}
+<div class="alert alert-info">История пуста — выполните первый поиск.</div>
+{% else %}
+<div class="card">
+    <ul class="list-group list-group-flush">
+        {% for r in rows %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ r.rooms }}-комн.</strong>
+                · {{ r.address }}
+                {% if r.district %}· {{ r.district }}{% endif %}
+                {% if r.price %}· {{ r.price|money }}{% endif %}
+            </div>
+            <span class="text-muted small">
+                {{ r.created_at.strftime('%d.%m.%Y %H:%M') }}
+            </span>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+<a href="{{ url_for('index') }}" class="btn btn-link mt-3">← Новый поиск</a>
+{% endblock %}

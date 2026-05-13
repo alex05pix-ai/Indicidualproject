@@ -1,0 +1,232 @@
+{% extends "_base.html" %}
+{% block title %}Результаты сравнения{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="h4 mb-1">Результаты сравнения</h1>
+        <div class="text-muted small">
+            Целевая квартира: {{ target.rooms }}-комн., {{ target.address }}
+            {% if target.district %}({{ target.district }}){% endif %}
+        </div>
+    </div>
+    <div class="text-end">
+        {% if job_id %}
+        <a class="btn btn-outline-success btn-sm"
+           href="{{ url_for('export_csv', job_id=job_id) }}">
+            ⬇️ Экспорт CSV
+        </a>
+        <button id="share-btn" class="btn btn-outline-primary btn-sm"
+                data-job="{{ job_id }}">
+            🔗 Поделиться
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+{% if share_url %}
+<div class="alert alert-info">
+    Ссылка для просмотра без перезапуска поиска:
+    <a href="{{ share_url }}">{{ share_url }}</a>
+</div>
+{% endif %}
+
+{% for w in warnings %}
+<div class="alert alert-warning">{{ w }}</div>
+{% endfor %}
+
+<!-- ------- Cтатистика ------- -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Найдено аналогов</div>
+                <div class="fs-4 fw-bold">{{ stats.count_total }}</div>
+                <div class="small">
+                    строгих: {{ stats.count_strict }},
+                    мягких: {{ stats.count_soft }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Средняя цена за м²</div>
+                <div class="fs-4 fw-bold">{{ stats.avg_pps|money }}</div>
+                <div class="small">медиана: {{ stats.median_pps|money }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Ваша цена за м²</div>
+                <div class="fs-4 fw-bold">{{ stats.target_pps|money }}</div>
+                <div class="small">
+                    {% if stats.deviation_pct is not none %}
+                        отклонение:
+                        <span class="{{ 'text-danger' if stats.deviation_pct > 0 else 'text-success' }}">
+                            {{ '%+.1f'|format(stats.deviation_pct) }}%
+                        </span>
+                    {% else %} — {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="text-muted small">Средний год постройки</div>
+                <div class="fs-4 fw-bold">{{ stats.avg_year or '—' }}</div>
+                <div class="small">
+                    {% if stats.year_diff is not none %}
+                        отклонение: {{ '%+d'|format(stats.year_diff) }} лет
+                    {% else %} — {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ------- Гистограмма ------- -->
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h6 mb-3">Распределение цен за м² (по строгим аналогам)</h2>
+        <canvas id="histogram" height="100"></canvas>
+    </div>
+</div>
+
+<!-- ------- Таблица ------- -->
+<div class="card mb-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Кол-во комнат</th>
+                        <th>Адрес</th>
+                        <th class="text-end">Цена</th>
+                        <th class="text-end">Площадь</th>
+                        <th class="text-end">Цена/м²</th>
+                        <th>Этаж</th>
+                        <th>Год</th>
+                        <th>Расст., км</th>
+                        <th>Примечание</th>
+                        <th>Ссылка</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Строка пользователя -->
+                    <tr class="table-primary">
+                        <td><strong>{{ target.rooms }}</strong></td>
+                        <td><strong>{{ target.address }}</strong></td>
+                        <td class="text-end">{{ target.price|money }}</td>
+                        <td class="text-end">
+                            {% if target.total_area %}{{ target.total_area }} м²{% else %}—{% endif %}
+                        </td>
+                        <td class="text-end">
+                            {{ stats.target_pps|money }}
+                        </td>
+                        <td>
+                            {% if target.floor %}{{ target.floor }}{% if target.floors_total %}/{{ target.floors_total }}{% endif %}{% else %}—{% endif %}
+                        </td>
+                        <td>{{ target.build_year or '—' }}</td>
+                        <td>—</td>
+                        <td><span class="badge bg-primary">Ваша квартира</span></td>
+                        <td>—</td>
+                    </tr>
+                    {% for l in listings %}
+                    <tr>
+                        <td>{{ l.rooms or '—' }}</td>
+                        <td>{{ l.address or '—' }}</td>
+                        <td class="text-end">{{ l.price|money }}</td>
+                        <td class="text-end">
+                            {% if l.total_area %}{{ l.total_area }} м²{% else %}—{% endif %}
+                        </td>
+                        <td class="text-end">{{ l.price_per_sqm|money }}</td>
+                        <td>
+                            {% if l.floor %}{{ l.floor }}{% if l.floors_total %}/{{ l.floors_total }}{% endif %}{% else %}—{% endif %}
+                        </td>
+                        <td>{{ l.build_year or '—' }}</td>
+                        <td>
+                            {% if l.distance_km is not none %}
+                                {{ l.distance_km|num(2) }}
+                            {% else %} — {% endif %}
+                        </td>
+                        <td>
+                            {% if l.rooms_mismatch %}
+                                <span class="badge bg-warning text-dark">
+                                    отклонение по комнатам
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ l.url }}" target="_blank" rel="noopener">
+                                открыть ↗
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center text-muted py-4">
+                            Аналогов не найдено. Попробуйте увеличить
+                            радиус поиска или ослабить фильтры.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<a href="{{ url_for('index') }}" class="btn btn-link">← Новый поиск</a>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+    const histData = {{ histogram|tojson }};
+    if (histData && histData.labels && histData.labels.length) {
+        new Chart(document.getElementById('histogram'), {
+            type: 'bar',
+            data: {
+                labels: histData.labels,
+                datasets: [{
+                    label: 'Кол-во объявлений',
+                    data: histData.counts,
+                    backgroundColor: 'rgba(13, 110, 253, 0.6)',
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
+    }
+
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+        shareBtn.addEventListener('click', async () => {
+            shareBtn.disabled = true;
+            try {
+                const r = await fetch(`/share/${shareBtn.dataset.job}`,
+                                      { method: 'POST' });
+                const data = await r.json();
+                if (data.share_url) {
+                    await navigator.clipboard.writeText(data.share_url);
+                    alert('Ссылка скопирована: ' + data.share_url);
+                }
+            } catch (e) {
+                alert('Не удалось создать ссылку: ' + e);
+            } finally {
+                shareBtn.disabled = false;
+            }
+        });
+    }
+</script>
+{% endblock %}

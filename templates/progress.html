@@ -1,0 +1,83 @@
+{% extends "_base.html" %}
+{% block title %}Идёт поиск аналогов…{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <h1 class="h4 mb-3">Идёт сбор данных с Avito</h1>
+        <p class="text-muted">
+            Не закрывайте страницу. Парсинг работает с задержками,
+            чтобы соответствовать «вежливому» режиму использования сайта.
+        </p>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="progress" style="height: 30px;">
+                    <div id="bar"
+                         class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         style="width: {{ job.progress|default(0) }}%">
+                        {{ job.progress|default(0) }}%
+                    </div>
+                </div>
+                <p id="status" class="mt-3 mb-0">{{ job.message|default('Запуск…') }}</p>
+            </div>
+        </div>
+
+        <div id="error-box" class="alert alert-danger mt-3 d-none"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    const jobId = "{{ job_id }}";
+    const bar = document.getElementById('bar');
+    const status = document.getElementById('status');
+    const errBox = document.getElementById('error-box');
+
+    function setProgress(p, msg) {
+        bar.style.width = p + '%';
+        bar.textContent = p + '%';
+        if (msg) status.textContent = msg;
+    }
+
+    // SocketIO live updates
+    try {
+        const socket = io();
+        socket.on('connect', () => socket.emit('subscribe', { job_id: jobId }));
+        socket.on('progress', (data) => {
+            setProgress(data.progress || 0, data.message || '');
+            if (data.status === 'done' && data.result_url) {
+                window.location.href = data.result_url;
+            }
+            if (data.status === 'error') {
+                errBox.textContent = data.message || 'Ошибка парсинга';
+                errBox.classList.remove('d-none');
+            }
+        });
+    } catch (e) { /* fallback ниже */ }
+
+    // Fallback-поллинг на случай, если websocket недоступен
+    async function poll() {
+        try {
+            const r = await fetch(`/api/job/${jobId}`);
+            if (!r.ok) return;
+            const d = await r.json();
+            setProgress(d.progress || 0, d.message || '');
+            if (d.status === 'done' && d.result_url) {
+                window.location.href = d.result_url;
+                return;
+            }
+            if (d.status === 'error') {
+                errBox.textContent = d.error || d.message || 'Ошибка';
+                errBox.classList.remove('d-none');
+                return;
+            }
+        } catch (_) {}
+        setTimeout(poll, 2000);
+    }
+    setTimeout(poll, 2000);
+</script>
+{% endblock %}
