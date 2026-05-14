@@ -1,0 +1,73 @@
+# =============================================================================
+# Render.com Blueprint — Avito Comparator
+#
+# Что делает:
+#   - Создаёт single web-сервис из Dockerfile.
+#   - Подключает persistent disk (1 GB) для SQLite-БД.
+#   - Открывает HTTPS на технорутевом домене (https://<service>.onrender.com).
+#
+# Как использовать:
+#   1) Зарегистрируйтесь на https://render.com (бесплатный тариф работает).
+#   2) New + → Blueprint → выберите свой форк репозитория.
+#   3) Render автоматически прочитает этот файл и создаст сервис.
+#   4) В разделе Environment задайте APP_PASSWORD и (опционально) DOMAIN_NAME.
+#
+# Документация формата: https://render.com/docs/blueprint-spec
+# =============================================================================
+
+services:
+  - type: web
+    name: avito-comparator
+    runtime: docker
+    plan: free                # free | starter | standard | pro
+    region: frankfurt         # frankfurt | oregon | singapore | ohio | virginia
+    branch: main
+    dockerfilePath: docker/Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeploy: true
+
+    # Render пробрасывает свой $PORT — вешаемся на него поверх дефолта.
+    envVars:
+      - key: APP_PORT
+        value: "10000"
+      - key: APP_HOST
+        value: "0.0.0.0"
+      - key: APP_DEBUG
+        value: "false"
+      - key: APP_HEADLESS
+        value: "true"
+      - key: APP_DATABASE_URL
+        value: "sqlite:////var/data/app.db"
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: APP_PASSWORD
+        sync: false           # задаёте вручную в UI, иначе сайт открыт
+      - key: APP_BASIC_AUTH_USER
+        value: admin
+      - key: APP_CITY
+        value: krasnoyarsk
+      - key: APP_CITY_DISPLAY
+        value: Красноярск
+      - key: APP_NOMINATIM_USER_AGENT
+        value: avito-comparator/1.0 (render-deploy)
+
+    # Render не разрешает переопределять CMD из Dockerfile в Blueprint,
+    # но мы можем переопределить порт через APP_PORT. Однако Render ожидает
+    # биндинг на $PORT — установим его экспортом в startCommand:
+    dockerCommand: >-
+      sh -c "exec gunicorn
+        --bind 0.0.0.0:$PORT
+        --worker-class eventlet
+        --workers 1
+        --threads 8
+        --timeout 300
+        --graceful-timeout 30
+        --access-logfile -
+        --error-logfile -
+        app.main:app"
+
+    disk:
+      name: avito-data
+      mountPath: /var/data
+      sizeGB: 1

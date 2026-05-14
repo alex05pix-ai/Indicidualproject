@@ -1,0 +1,96 @@
+# =============================================================================
+# Avito Comparator — docker-compose
+#
+# Сервисы:
+#   - app     : Flask + Playwright (Gunicorn на :8000), внутренняя сеть.
+#   - nginx   : публичный слой на :80 / :443 с TLS и WebSocket.
+#   - certbot : выпускает сертификат Let's Encrypt по запросу (запускается вручную).
+#
+# Запуск (быстрый):
+#   docker compose up --build
+#
+# Запуск в фоне:
+#   docker compose up -d --build
+#
+# Получение сертификата (после того, как DNS уже указывает на IP сервера):
+#   docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
+#       -d $DOMAIN_NAME --email $LETSENCRYPT_EMAIL --agree-tos --no-eff-email
+#   # затем раскомментируйте HTTPS-секцию в nginx/nginx.conf и:
+#   docker compose restart nginx
+# =============================================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: avito-comparator:latest
+    container_name: avito-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Безопасные дефолты, если в .env что-то не задано:
+      APP_HOST: "0.0.0.0"
+      APP_PORT: "8000"
+      APP_HEADLESS: "true"
+      # При работе за nginx:
+      APP_DATABASE_URL: ${APP_DATABASE_URL:-sqlite:///data/app.db}
+    volumes:
+      - app-data:/app/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=3).status==200 else 1)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: avito-nginx
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # При запуске без домена nginx сматчит любой Host благодаря "_" -> поведение по умолчанию.
+      NGINX_SERVER_NAME: ${DOMAIN_NAME:-_}
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx/proxy.inc:/etc/nginx/conf.d/proxy.inc:ro
+      - certbot-www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    # Используем встроенный envsubst через шаблоны: nginx 1.19+ автоматически
+    # обрабатывает /etc/nginx/templates/*.template и записывает результат
+    # в /etc/nginx/conf.d/, плюс копируем основной конфиг.
+    command: >
+      /bin/sh -c "envsubst '$$NGINX_SERVER_NAME'
+        < /etc/nginx/templates/nginx.conf.template
+        > /etc/nginx/nginx.conf
+        && nginx -g 'daemon off;'"
+    networks:
+      - internal
+
+  # certbot запускается по требованию (`docker compose run --rm certbot ...`).
+  # Профиль `tools` не даёт ему стартовать вместе с обычным `up`.
+  certbot:
+    image: certbot/certbot:latest
+    container_name: avito-certbot
+    profiles: ["tools"]
+    volumes:
+      - certbot-www:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    entrypoint: ["certbot"]
+
+volumes:
+  app-data:
+  certbot-www:
+  letsencrypt:
+
+networks:
+  internal:
+    driver: bridge

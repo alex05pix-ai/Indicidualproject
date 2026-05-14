@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}История сравнений · Avito Comparator{% endblock %}
+
+{% block content %}
+<h1 class="h4 mb-3">Последние сравнения</h1>
+<p class="text-secondary">Сохраняются автоматически. Ссылки хранятся 24 часа.</p>
+
+{% if not items %}
+  <div class="alert alert-info">
+    История пуста. <a href="{{ url_for('index') }}">Запустите первый поиск</a>.
+  </div>
+{% else %}
+  <div class="table-responsive">
+    <table class="table align-middle">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Адрес</th>
+          <th>Район</th>
+          <th>Комнат</th>
+          <th class="text-end">Цена</th>
+          <th class="text-end">Аналогов</th>
+          <th class="text-end">Средняя цена/м²</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for it in items %}
+        <tr>
+          <td><time datetime="{{ it.created_at }}">{{ it.created_at|replace('T', ' ')|truncate(16, true, '') }}</time></td>
+          <td>{{ it.address }}</td>
+          <td>{{ it.district or '—' }}</td>
+          <td>{{ it.rooms }}</td>
+          <td class="text-end">
+            {% if it.price %}{{ "{:,.0f}".format(it.price|float).replace(',', '\u00a0') }} ₽{% else %}—{% endif %}
+          </td>
+          <td class="text-end">{{ it.listings_found }}</td>
+          <td class="text-end">
+            {% if it.avg_price_per_m2 %}{{ "{:,.0f}".format(it.avg_price_per_m2|float).replace(',', '\u00a0') }} ₽{% else %}—{% endif %}
+          </td>
+          <td class="text-end">
+            {% if it.share_id %}
+              <a class="btn btn-sm btn-outline-primary" href="{{ url_for('result', share_id=it.share_id) }}">Открыть</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endif %}
+
+<a href="{{ url_for('index') }}" class="btn btn-primary mt-3">Новый поиск</a>
+{% endblock %}

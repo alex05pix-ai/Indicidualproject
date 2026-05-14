@@ -1,0 +1,241 @@
+{% extends "base.html" %}
+{% block title %}Результаты сравнения · Avito Comparator{% endblock %}
+
+{% set analytics = data.get('analytics', {}) %}
+{% set user = analytics.get('user', {}) %}
+{% set listings = analytics.get('listings', []) %}
+{% set warnings = analytics.get('warnings', []) %}
+{% set histogram = analytics.get('histogram', []) %}
+
+{% macro fmt_price(v) -%}
+  {% if v is none or v == '' %}—{% else %}{{ "{:,.0f}".format(v|float).replace(',', '\u00a0') }} ₽{% endif %}
+{%- endmacro %}
+
+{% macro fmt_num(v, suffix='') -%}
+  {% if v is none or v == '' %}—{% else %}{{ v }}{{ suffix }}{% endif %}
+{%- endmacro %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
+  <div>
+    <h1 class="h4 mb-1">Сравнение с аналогами</h1>
+    <div class="text-secondary small">
+      <strong>{{ user.address }}</strong> ·
+      {{ user.rooms }} ·
+      площадь {{ fmt_num(user.total_area, ' м²') }} ·
+      цена {{ fmt_price(user.price) }}
+      {% if user.year_built %}· {{ user.year_built }} г.{% endif %}
+    </div>
+  </div>
+  <div class="btn-toolbar gap-2">
+    <a href="{{ url_for('export_csv', share_id=share_id) }}" class="btn btn-outline-secondary">
+      ⬇ CSV / Excel
+    </a>
+    <button type="button" class="btn btn-outline-secondary" id="share-btn"
+            data-share-url="{{ url_for('result', share_id=share_id, _external=True) }}">
+      🔗 Поделиться
+    </button>
+    <a href="{{ url_for('index') }}" class="btn btn-primary">Новый поиск</a>
+  </div>
+</div>
+
+{% if warnings %}
+  <div class="alert alert-warning">
+    <strong>Внимание:</strong>
+    <ul class="mb-0">
+      {% for w in warnings %}<li>{{ w }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Ваша цена/м²</div>
+      <div class="h5 mb-0">{{ fmt_price(user.price_per_m2) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Средняя цена/м²</div>
+      <div class="h5 mb-0">{{ fmt_price(analytics.avg_price_per_m2) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Медианная цена объекта</div>
+      <div class="h5 mb-0">{{ fmt_price(analytics.median_price) }}</div>
+    </div></div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card h-100"><div class="card-body">
+      <div class="text-secondary small">Отклонение от средней</div>
+      <div class="h5 mb-0
+        {% if analytics.deviation_pct is not none %}
+          {% if analytics.deviation_pct > 5 %}text-danger
+          {% elif analytics.deviation_pct < -5 %}text-success
+          {% endif %}
+        {% endif %}">
+        {% if analytics.deviation_pct is none %}—{% else %}
+          {{ '%+.1f'|format(analytics.deviation_pct) }}%
+        {% endif %}
+      </div>
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-12 col-lg-7">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6 card-title">Распределение цены за м²</h2>
+        {% if histogram %}
+          <div class="chart-wrap">
+            <canvas id="hist-chart" aria-label="Гистограмма цен" role="img"></canvas>
+          </div>
+        {% else %}
+          <p class="text-secondary mb-0">Недостаточно данных для гистограммы.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  <div class="col-12 col-lg-5">
+    <div class="card h-100">
+      <div class="card-body">
+        <h2 class="h6 card-title">Сводка</h2>
+        <ul class="list-unstyled small mb-0">
+          <li>Аналогов с точным совпадением комнат: <strong>{{ analytics.strict_count }}</strong></li>
+          <li>С отклонением по комнатам (для справки): <strong>{{ analytics.soft_count }}</strong></li>
+          <li>Средний год постройки: <strong>{{ fmt_num(analytics.avg_year_built) }}</strong></li>
+          <li>Медианная цена/м²: <strong>{{ fmt_price(analytics.median_price_per_m2) }}</strong></li>
+          <li class="text-secondary mt-2">Радиус поиска: {{ analytics.get('filters', {}).get('radius_km', '—') }} км</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <h2 class="h6 card-title">Таблица аналогов</h2>
+    <div class="table-responsive listings-table">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th scope="col">Комнат</th>
+            <th scope="col">Адрес</th>
+            <th scope="col" class="text-end">Цена</th>
+            <th scope="col" class="text-end">Площадь</th>
+            <th scope="col" class="text-end">Цена/м²</th>
+            <th scope="col">Этаж</th>
+            <th scope="col">Год</th>
+            <th scope="col">Расст.</th>
+            <th scope="col">Ссылка</th>
+            <th scope="col">Примеч.</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="user-row table-primary">
+            <td data-label="Комнат">{{ user.rooms }}</td>
+            <td data-label="Адрес"><strong>Ваша квартира · {{ user.address }}</strong></td>
+            <td data-label="Цена" class="text-end">{{ fmt_price(user.price) }}</td>
+            <td data-label="Площадь" class="text-end">{{ fmt_num(user.total_area, ' м²') }}</td>
+            <td data-label="Цена/м²" class="text-end">{{ fmt_price(user.price_per_m2) }}</td>
+            <td data-label="Этаж">—</td>
+            <td data-label="Год">{{ fmt_num(user.year_built) }}</td>
+            <td data-label="Расстояние">0</td>
+            <td data-label="Ссылка">—</td>
+            <td data-label="Примечание">—</td>
+          </tr>
+          {% for it in listings %}
+            <tr class="{% if it.rooms_mismatch %}table-warning{% endif %}">
+              <td data-label="Комнат">{{ it.rooms_raw or it.rooms or '—' }}</td>
+              <td data-label="Адрес">{{ it.address or '—' }}</td>
+              <td data-label="Цена" class="text-end">{{ fmt_price(it.price) }}</td>
+              <td data-label="Площадь" class="text-end">{{ fmt_num(it.total_area, ' м²') }}</td>
+              <td data-label="Цена/м²" class="text-end">{{ fmt_price(it.price_per_m2) }}</td>
+              <td data-label="Этаж">
+                {% if it.floor and it.floors_total %}{{ it.floor }}/{{ it.floors_total }}{% else %}—{% endif %}
+              </td>
+              <td data-label="Год">{{ fmt_num(it.year_built) }}</td>
+              <td data-label="Расстояние">
+                {% if it.distance_km is not none %}{{ '%.2f'|format(it.distance_km) }} км{% else %}—{% endif %}
+              </td>
+              <td data-label="Ссылка">
+                {% if it.url %}
+                  <a href="{{ it.url }}" target="_blank" rel="noopener noreferrer">Avito ↗</a>
+                {% else %}—{% endif %}
+              </td>
+              <td data-label="Примечание">
+                {% if it.rooms_mismatch %}<span class="badge text-bg-warning">отклонение по комнатам</span>{% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not listings %}
+      <p class="text-secondary mt-3 mb-0">Аналогов не найдено. Попробуйте увеличить радиус поиска или изменить район.</p>
+    {% endif %}
+  </div>
+</div>
+
+<p class="text-secondary small mt-3">
+  Ссылка на это сравнение действительна 24 часа.
+  Создано: <time datetime="{{ created_at }}">{{ created_at }}</time>.
+</p>
+{% endblock %}
+
+{% block scripts %}
+<script id="histogram-data" type="application/json">{{ histogram|tojson }}</script>
+<script>
+  (function () {
+    const node = document.getElementById('histogram-data');
+    if (!node) return;
+    let bins;
+    try { bins = JSON.parse(node.textContent || '[]'); } catch (e) { bins = []; }
+    const canvas = document.getElementById('hist-chart');
+    if (!canvas || !bins.length || typeof Chart === 'undefined') return;
+
+    const labels = bins.map(b => `${Math.round(b.from).toLocaleString('ru')}–${Math.round(b.to).toLocaleString('ru')}`);
+    const counts = bins.map(b => b.count);
+
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Объявлений',
+          data: counts,
+          backgroundColor: 'rgba(13,110,253,0.6)',
+          borderColor: 'rgba(13,110,253,1)',
+          borderWidth: 1,
+        }],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { ticks: { maxRotation: 45, minRotation: 0 } }
+        }
+      }
+    });
+  })();
+
+  document.getElementById('share-btn')?.addEventListener('click', async (e) => {
+    const url = e.currentTarget.dataset.shareUrl;
+    if (navigator.share) {
+      try { await navigator.share({ title: document.title, url }); return; } catch (_) {}
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      e.currentTarget.textContent = '✓ Скопировано';
+      setTimeout(() => { e.currentTarget.textContent = '🔗 Поделиться'; }, 1500);
+    } catch (_) {
+      window.prompt('Скопируйте ссылку:', url);
+    }
+  });
+</script>
+{% endblock %}

@@ -1,0 +1,41 @@
+.git
+.github
+.gitignore
+.dockerignore
+
+# Caches
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local env
+.env
+.env.local
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Docker
+docker-compose*.yml
+docker/Dockerfile.dev
+
+# Tests / docs build artifacts
+tests/
+docs/_build/
+
+# Node / frontend (не используется, но на всякий)
+node_modules/
+
+# Misc
+README.md
+deploy.sh
