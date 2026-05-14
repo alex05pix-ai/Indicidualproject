@@ -1,0 +1,28 @@
+{
+  "name": "Avito Comparator — Красноярск",
+  "short_name": "AvitoCmp",
+  "description": "Сравнение цен на квартиры в Красноярске по данным Avito.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "theme_color": "#0d6efd",
+  "background_color": "#ffffff",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='32' fill='%230d6efd'/><text x='50%25' y='55%25' font-size='128' text-anchor='middle' dominant-baseline='middle' fill='white'>%F0%9F%8F%A0</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='96' fill='%230d6efd'/><text x='50%25' y='55%25' font-size='340' text-anchor='middle' dominant-baseline='middle' fill='white'>%F0%9F%8F%A0</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable any"
+    }
+  ]
+}

@@ -1,0 +1,84 @@
+# =============================================================================
+# Fly.io configuration — Avito Comparator
+#
+# Как использовать:
+#   1) Установите flyctl: https://fly.io/docs/hands-on/install-flyctl/
+#   2) flyctl auth signup   (или login)
+#   3) flyctl launch --no-deploy   # отредактирует app name, region и т.д.
+#   4) flyctl volumes create avito_data --size 1 --region fra
+#   5) flyctl secrets set APP_SECRET_KEY=...random... APP_PASSWORD=...
+#   6) flyctl deploy
+#
+# HTTPS включён автоматически: https://<app>.fly.dev
+# Своя доменная зона:
+#   flyctl certs add example.com
+# =============================================================================
+
+app = "avito-comparator"          # переименуйте при первом деплое (уникально)
+primary_region = "fra"            # ближайший: fra | waw | ams | otp
+kill_signal = "SIGINT"
+kill_timeout = "30s"
+
+[build]
+  dockerfile = "docker/Dockerfile"
+
+[env]
+  APP_HOST = "0.0.0.0"
+  APP_PORT = "8000"
+  APP_DEBUG = "false"
+  APP_HEADLESS = "true"
+  APP_CITY = "krasnoyarsk"
+  APP_CITY_DISPLAY = "Красноярск"
+  APP_DATABASE_URL = "sqlite:////data/app.db"
+  APP_NOMINATIM_USER_AGENT = "avito-comparator/1.0 (fly.io)"
+  PORT = "8000"
+
+# SQLite требует постоянного хранилища
+[mounts]
+  source = "avito_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"      # выключает машину когда никто не пользуется
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    grace_period = "30s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/healthz"
+
+# WebSocket и долгие запросы
+[[services]]
+  protocol = "tcp"
+  internal_port = 8000
+  processes = ["app"]
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 50
+    soft_limit = 30
+
+# Машинка чуть мощнее, чем дефолтная (Playwright требователен)
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 1024
+
+# Один процесс, gunicorn уже задан в Dockerfile CMD
+[processes]
+  app = "gunicorn --bind 0.0.0.0:8000 --worker-class eventlet --workers 1 --threads 8 --timeout 300 --access-logfile - --error-logfile - app.main:app"
