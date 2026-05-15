@@ -1,0 +1,73 @@
+# ============================================
+# Docker Compose для Квартира-Компаратор
+# Запуск: docker-compose up -d
+# ============================================
+
+version: "3.8"
+
+services:
+  # === Python-приложение ===
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: kvartira-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - APP_HOST=0.0.0.0
+      - APP_PORT=5000
+    volumes:
+      - app_data:/app/data
+      - ./cookies.json:/app/cookies.json:ro
+    networks:
+      - kvartira-net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # === Nginx веб-сервер ===
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: kvartira-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./app/static:/app/app/static:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - kvartira-net
+
+  # === Certbot для SSL (опционально) ===
+  certbot:
+    image: certbot/certbot
+    container_name: kvartira-certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    # Для получения сертификата раскомментируйте и запустите:
+    # command: certonly --webroot -w /var/www/certbot --email your@email.com -d yourdomain.com --agree-tos --no-eff-email
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do sleep 12h & wait $${!}; certbot renew; done;'"
+    profiles:
+      - ssl
+
+volumes:
+  app_data:
+    driver: local
+  certbot_www:
+  certbot_conf:
+
+networks:
+  kvartira-net:
+    driver: bridge
