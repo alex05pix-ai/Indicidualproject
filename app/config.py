@@ -21,7 +21,7 @@ class Config:
     SECRET_KEY: str = os.getenv("APP_SECRET_KEY", "change-me-in-production-please")
     DEBUG: bool = os.getenv("APP_DEBUG", "false").lower() in ("true", "1", "yes")
     HOST: str = os.getenv("APP_HOST", "0.0.0.0")
-    PORT: int = int(os.getenv("APP_PORT", "5000"))
+    PORT: int = int(os.getenv("PORT", os.getenv("APP_PORT", "5000")))
 
     # === Домен и доступ ===
     DOMAIN_NAME: Optional[str] = os.getenv("DOMAIN_NAME", None)

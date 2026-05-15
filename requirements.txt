@@ -6,7 +6,6 @@ flask-wtf==1.2.2
 
 # === Async support ===
 eventlet==0.36.1
-gevent==24.2.1
 
 # === Database ===
 SQLAlchemy==2.0.36
@@ -23,7 +22,6 @@ geopy==2.4.1
 # === HTTP & Utils ===
 requests==2.32.3
 python-dotenv==1.0.1
-aiohttp==3.11.9
 
 # === Security ===
 Werkzeug==3.1.3

@@ -77,7 +77,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/ || exit 1
 
 # Запуск через Gunicorn с eventlet для WebSocket
-CMD ["gunicorn", "--worker-class", "eventlet", "--workers", "1", \
-     "--bind", "0.0.0.0:5000", "--timeout", "300", \
-     "--access-logfile", "-", "--error-logfile", "-", \
-     "app.main:app"]
+CMD gunicorn --worker-class eventlet --workers 1 \
+     --bind 0.0.0.0:${APP_PORT:-5000} --timeout 300 \
+     --access-logfile - --error-logfile - \
+     app.main:app

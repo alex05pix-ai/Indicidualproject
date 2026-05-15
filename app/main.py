@@ -61,7 +61,7 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 # Создаём директорию для данных
 data_dir = Path(__file__).parent.parent / "data"
-data_dir.mkdir(exist_ok=True)
+data_dir.mkdir(parents=True, exist_ok=True)
 
 # Инициализация БД
 init_db()
