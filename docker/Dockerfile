@@ -24,35 +24,46 @@ LABEL description="Apartment price comparison app for Krasnoyarsk"
 
 WORKDIR /app
 
-# Системные зависимости для Playwright Chromium
+# Системные зависимости для Playwright Chromium (все нужные, без install-deps)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ca-certificates \
     fonts-liberation \
+    fonts-freefont-ttf \
+    fontconfig \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
+    libcairo2 \
     libcups2 \
     libdbus-1-3 \
     libdrm2 \
+    libexpat1 \
     libgbm1 \
+    libglib2.0-0 \
     libgtk-3-0 \
     libnspr4 \
     libnss3 \
+    libpango-1.0-0 \
+    libpangocairo-1.0-0 \
+    libx11-6 \
+    libx11-xcb1 \
+    libxcb1 \
     libxcomposite1 \
     libxdamage1 \
+    libxext6 \
     libxfixes3 \
     libxrandr2 \
     libxshmfence1 \
+    libxkbcommon0 \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Копируем установленные Python-пакеты
 COPY --from=builder /install /usr/local
 
-# Устанавливаем Playwright и Chromium
-RUN playwright install chromium && \
-    playwright install-deps chromium
+# Устанавливаем только Chromium (без install-deps — зависимости уже установлены выше)
+RUN playwright install chromium
 
 # Копируем код приложения
 COPY app/ ./app/
