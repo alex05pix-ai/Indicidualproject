@@ -1,8 +1,4 @@
-# ============================================
-# Render.com конфигурация деплоя
-# Нативная сборка Python (без Docker) — совместимо с бесплатным тиром
-# ============================================
-
+# Render.com — Python runtime (без Docker)
 services:
   - type: web
     name: kvartira-comparator
@@ -11,28 +7,13 @@ services:
     region: frankfurt
     branch: feature/kvartira-comparator
     autoDeploy: true
-    buildCommand: |
-      pip install -r requirements.txt && playwright install chromium && playwright install-deps chromium
-    startCommand: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT --timeout 300 --access-logfile - --error-logfile - app.main:app
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT --timeout 120 app.main:app
     healthCheckPath: /
     envVars:
-      - key: APP_SECRET_KEY
-        generateValue: true
-      - key: APP_HOST
-        value: "0.0.0.0"
-      - key: APP_DEBUG
-        value: "false"
-      - key: APP_DATABASE_URL
-        value: "sqlite:///data/app.db"
-      - key: APP_LOG_LEVEL
-        value: "INFO"
       - key: PYTHON_VERSION
         value: "3.11.7"
-      - key: APP_PASSWORD
-        sync: false  # Задать вручную в панели Render
-      - key: DOMAIN_NAME
-        sync: false  # Опционально
-    disk:
-      name: kvartira-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: APP_DATABASE_URL
+        value: "sqlite:///data/app.db"
