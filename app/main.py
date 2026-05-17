@@ -106,7 +106,11 @@ def status(search_id):
     data = get_search(search_id)
     if not data:
         return jsonify({"error": "Не найден"}), 404
-    return jsonify({"status": data["status"]})
+    # Фронтенд ожидает "done" или "error"
+    s = data["status"]
+    if s == "completed":
+        s = "done"
+    return jsonify({"status": s})
 
 
 @app.route("/history")
