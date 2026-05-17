@@ -195,7 +195,7 @@ class AvitoParser:
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(
-                headless=True,
+                headless=False,
                 args=["--no-sandbox", "--disable-dev-shm-usage"],
             )
 
@@ -209,6 +209,13 @@ class AvitoParser:
 
             if has_stealth:
                 await stealth_async(page)
+
+            # Первый заход — ждём прохождения капчи пользователем
+            first_url = self._build_search_url(1)
+            await page.goto(first_url, wait_until="domcontentloaded", timeout=60000)
+            logger.info("Ожидание прохождения капчи (30 сек)... Если капча не появилась — всё ок.")
+            self._report_progress(5, 100, "Если появилась капча — пройдите её в открывшемся окне...")
+            await asyncio.sleep(30)
 
             for page_num in range(1, self.max_pages + 1):
                 if len(results) >= self.max_analogs:
@@ -315,7 +322,7 @@ def run_parse_single(url: str) -> Optional[Dict]:
 
         async with async_playwright() as p:
             browser = await p.chromium.launch(
-                headless=True,
+                headless=False,
                 args=["--no-sandbox", "--disable-dev-shm-usage"],
             )
             context = await browser.new_context(
