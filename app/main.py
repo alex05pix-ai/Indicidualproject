@@ -3,6 +3,9 @@
 Содержит маршруты, SocketIO-события и логику сравнения квартир.
 """
 
+import eventlet
+eventlet.monkey_patch()
+
 import json
 import logging
 import os
