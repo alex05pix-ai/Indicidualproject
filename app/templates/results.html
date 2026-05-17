@@ -126,8 +126,8 @@
                     <div class="card h-100 text-center metric-card">
                         <div class="card-body py-3">
                             <div class="text-muted small">Отклонение цены</div>
-                            <div class="h5 mb-0 fw-bold {% if analytics.price_deviation_pct and analytics.price_deviation_pct > 15 %}text-danger{% elif analytics.price_deviation_pct and analytics.price_deviation_pct < -15 %}text-success{% endif %}">
-                                {% if analytics.price_deviation_pct is not none %}
+                            <div class="h5 mb-0 fw-bold {% if analytics.get('price_deviation_pct') and analytics.price_deviation_pct > 15 %}text-danger{% elif analytics.get('price_deviation_pct') and analytics.price_deviation_pct < -15 %}text-success{% endif %}">
+                                {% if analytics.get('price_deviation_pct') is not none %}
                                 {{ "%+.1f"|format(analytics.price_deviation_pct) }}%
                                 {% else %}—{% endif %}
                             </div>
