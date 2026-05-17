@@ -105,7 +105,6 @@ async function handleSearchSubmit(e) {
         rooms: document.getElementById('rooms').value,
         price: document.getElementById('price').value.replace(/[^\d]/g, ''),
         total_area: document.getElementById('total_area').value || null,
-        kitchen_area: document.getElementById('kitchen_area').value || null,
         floor: document.getElementById('floor').value || null,
         total_floors: document.getElementById('total_floors').value || null,
         year_built: document.getElementById('year_built').value || null,
@@ -181,7 +180,6 @@ async function handleAutofill() {
                 document.getElementById('price').value = Number(data.price).toLocaleString('ru-RU');
             }
             if (data.total_area) document.getElementById('total_area').value = data.total_area;
-            if (data.kitchen_area) document.getElementById('kitchen_area').value = data.kitchen_area;
             if (data.floor) document.getElementById('floor').value = data.floor;
             if (data.total_floors) document.getElementById('total_floors').value = data.total_floors;
             if (data.year_built) document.getElementById('year_built').value = data.year_built;
