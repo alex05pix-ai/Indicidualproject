@@ -208,7 +208,7 @@
                                 </tr>
                                 <!-- Аналоги -->
                                 {% if results %}
-                                {% for item in results|sort(attribute='price_per_m2') if item.price and item.total_area %}
+                                {% for item in results if item.price and item.total_area %}
                                 <tr{% if item.note %} class="table-warning"{% endif %}>
                                     <td>{{ item.rooms or '—' }}</td>
                                     <td class="small">{{ item.address or '—' }}</td>
