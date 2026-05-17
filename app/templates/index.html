@@ -3,212 +3,193 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Сравнение стоимости квартир в Красноярске на основе реальных данных Avito">
-    <meta name="theme-color" content="#0d6efd">
-    <title>Квартира-Компаратор | Красноярск</title>
-    <link rel="manifest" href="/static/manifest.json">
+    <title>Квартира-Компаратор</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-    <link href="/static/style.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <!-- Навбар -->
-    <nav class="navbar navbar-expand-lg sticky-top">
+    <nav class="navbar navbar-expand-lg sticky-top bg-body-tertiary shadow-sm">
         <div class="container">
-            <a class="navbar-brand fw-bold" href="/">
-                <i class="bi bi-building"></i> Квартира-Компаратор
-            </a>
+            <a class="navbar-brand fw-bold" href="/">🏠 Квартира-Компаратор</a>
             <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-sm btn-outline-secondary" id="historyBtn" title="История">
-                    <i class="bi bi-clock-history"></i>
+                <button class="btn btn-sm btn-outline-secondary" id="btnHistory" data-bs-toggle="modal" data-bs-target="#historyModal">
+                    📋 История
                 </button>
-                <button class="btn btn-sm btn-outline-secondary" id="themeToggle" title="Сменить тему">
-                    <i class="bi bi-moon-stars"></i>
+                <button class="btn btn-sm btn-outline-secondary" id="btnThemeToggle" title="Сменить тему">
+                    🌙
                 </button>
             </div>
         </div>
     </nav>
 
     <main class="container py-4">
-        {% if error %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ error }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endif %}
-
-        <!-- Заголовок -->
-        <div class="text-center mb-4">
-            <h1 class="h3 fw-bold">Сравнение стоимости квартир</h1>
-            <p class="text-muted">Введите параметры квартиры для сравнения с аналогами в Красноярске</p>
-        </div>
-
-        <!-- Форма ввода -->
-        <form id="searchForm" class="card shadow-sm">
-            <div class="card-body p-4">
-                <!-- Автозаполнение -->
-                <div class="mb-4 p-3 bg-body-tertiary rounded">
-                    <label class="form-label fw-semibold">
-                        <i class="bi bi-link-45deg"></i> Автозаполнение из Avito (опционально)
-                    </label>
-                    <div class="input-group">
-                        <input type="url" class="form-control" id="avitoUrl"
-                               placeholder="Вставьте ссылку на объявление Avito">
-                        <button type="button" class="btn btn-outline-primary" id="autofillBtn">
-                            <i class="bi bi-magic"></i> Заполнить
-                        </button>
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-xl-7">
+                <div class="card shadow-sm">
+                    <div class="card-header">
+                        <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tab-manual" data-bs-toggle="tab" data-bs-target="#mode-manual" type="button" role="tab" aria-selected="true">
+                                    ✏️ Ручной ввод
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-auto" data-bs-toggle="tab" data-bs-target="#mode-auto" type="button" role="tab" aria-selected="false">
+                                    🔍 Автоматический поиск
+                                </button>
+                            </li>
+                        </ul>
                     </div>
-                    <div class="form-text">Вставьте ссылку на объявление — данные заполнятся автоматически</div>
-                </div>
+                    <div class="card-body">
+                        <form id="searchForm" method="POST" action="/search">
+                            <input type="hidden" name="mode" id="formMode" value="manual">
 
-                <hr class="my-4">
+                            <!-- Основные параметры квартиры -->
+                            <h6 class="text-muted mb-3">Параметры вашей квартиры</h6>
 
-                <!-- Основные поля -->
-                <div class="row g-3">
-                    <!-- Адрес -->
-                    <div class="col-md-6">
-                        <label for="address" class="form-label fw-semibold">
-                            Адрес или ориентир <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="address" name="address"
-                               placeholder="ул. 9 Мая, 27" required>
-                        <div class="form-text">Улица и дом, или название микрорайона</div>
-                    </div>
+                            <div class="mb-3">
+                                <label for="address" class="form-label">Адрес <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="address" name="address" placeholder="ул. Ленина, 10" required>
+                            </div>
 
-                    <!-- Район -->
-                    <div class="col-md-6">
-                        <label for="district" class="form-label fw-semibold">Район / Микрорайон</label>
-                        <select class="form-select" id="district" name="district">
-                            <option value="">Выберите район...</option>
-                            <optgroup label="Районы">
-                                {% for d in districts %}
-                                <option value="{{ d }}">{{ d }}</option>
-                                {% endfor %}
-                            </optgroup>
-                            <optgroup label="Микрорайоны">
-                                {% for m in microdistricts %}
-                                <option value="{{ m }}">{{ m }}</option>
-                                {% endfor %}
-                            </optgroup>
-                        </select>
-                    </div>
-
-                    <!-- Комнаты -->
-                    <div class="col-md-4">
-                        <label for="rooms" class="form-label fw-semibold">
-                            Количество комнат <span class="text-danger">*</span>
-                        </label>
-                        <select class="form-select" id="rooms" name="rooms" required>
-                            <option value="">Выберите...</option>
-                            <option value="studio">Студия</option>
-                            <option value="1">1 комната</option>
-                            <option value="2">2 комнаты</option>
-                            <option value="3">3 комнаты</option>
-                            <option value="4+">4+ комнат</option>
-                        </select>
-                    </div>
-
-                    <!-- Цена -->
-                    <div class="col-md-4">
-                        <label for="price" class="form-label fw-semibold">
-                            Цена (руб.) <span class="text-danger">*</span>
-                        </label>
-                        <input type="text" class="form-control" id="price" name="price"
-                               placeholder="4 500 000" required inputmode="numeric">
-                    </div>
-
-                    <!-- Площадь -->
-                    <div class="col-md-4">
-                        <label for="total_area" class="form-label fw-semibold">Общая площадь (м²)</label>
-                        <input type="number" class="form-control" id="total_area" name="total_area"
-                               placeholder="65" step="0.1" min="10" max="500">
-                    </div>
-
-                    <!-- Этаж -->
-                    <div class="col-md-6">
-                        <label for="floor" class="form-label">Этаж квартиры</label>
-                        <input type="number" class="form-control" id="floor" name="floor"
-                               placeholder="5" min="1" max="50">
-                    </div>
-
-                    <!-- Год постройки -->
-                    <div class="col-md-6">
-                        <label for="year_built" class="form-label">Год постройки</label>
-                        <input type="number" class="form-control" id="year_built" name="year_built"
-                               placeholder="2015" min="1950" max="2026">
-                    </div>
-                </div>
-
-                <!-- Дополнительные фильтры -->
-                <div class="mt-4">
-                    <button class="btn btn-sm btn-link text-decoration-none p-0" type="button"
-                            data-bs-toggle="collapse" data-bs-target="#advancedFilters">
-                        <i class="bi bi-sliders"></i> Дополнительные фильтры
-                    </button>
-                    <div class="collapse mt-3" id="advancedFilters">
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label for="area_tolerance" class="form-label">Допуск по площади</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" id="area_tolerance"
-                                           name="area_tolerance" value="{{ (default_tolerance * 100)|int }}"
-                                           min="5" max="50" step="5">
-                                    <span class="input-group-text">%</span>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="district" class="form-label">Район</label>
+                                    <select class="form-select" id="district" name="district">
+                                        <option value="">Выберите район</option>
+                                        {% for d in districts %}
+                                        <option value="{{ d }}">{{ d }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="microdistrict" class="form-label">Микрорайон</label>
+                                    <select class="form-select" id="microdistrict" name="microdistrict">
+                                        <option value="">Выберите микрорайон</option>
+                                        {% for m in microdistricts %}
+                                        <option value="{{ m }}">{{ m }}</option>
+                                        {% endfor %}
+                                    </select>
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <label for="max_distance" class="form-label">Макс. расстояние</label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" id="max_distance"
-                                           name="max_distance" value="{{ default_distance }}"
-                                           min="0.5" max="10" step="0.5">
-                                    <span class="input-group-text">км</span>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <label for="rooms" class="form-label">Комнаты</label>
+                                    <select class="form-select" id="rooms" name="rooms">
+                                        <option value="">—</option>
+                                        <option value="studio">Студия</option>
+                                        <option value="1">1</option>
+                                        <option value="2">2</option>
+                                        <option value="3">3</option>
+                                        <option value="4+">4+</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="price" class="form-label">Цена, ₽ <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control price-input" id="price" name="price" placeholder="5 000 000" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="total_area" class="form-label">Площадь, м²</label>
+                                    <input type="number" class="form-control" id="total_area" name="total_area" placeholder="65" step="0.1" min="1">
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <label for="search_depth" class="form-label">Количество аналогов</label>
-                                <input type="number" class="form-control" id="search_depth"
-                                       name="search_depth" value="{{ default_depth }}"
-                                       min="5" max="20">
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-6">
+                                    <label for="floor" class="form-label">Этаж</label>
+                                    <input type="number" class="form-control" id="floor" name="floor" placeholder="5" min="1" max="99">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="year_built" class="form-label">Год постройки</label>
+                                    <input type="number" class="form-control" id="year_built" name="year_built" placeholder="2015" min="1900" max="2030">
+                                </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Кнопка отправки -->
-                <div class="mt-4 text-center">
-                    <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn">
-                        <i class="bi bi-search"></i> Найти аналоги и сравнить
-                    </button>
-                </div>
-            </div>
-        </form>
+                            <!-- Tab content -->
+                            <div class="tab-content mt-4">
+                                <!-- Ручной ввод -->
+                                <div class="tab-pane fade show active" id="mode-manual" role="tabpanel">
+                                    <hr>
+                                    <h6 class="text-muted mb-3">Аналоги для сравнения</h6>
+                                    <p class="small text-muted">Добавьте квартиры-аналоги (минимум цена и площадь)</p>
 
-        <!-- Модальное окно истории -->
-        <div class="modal fade" id="historyModal" tabindex="-1">
-            <div class="modal-dialog modal-lg">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title"><i class="bi bi-clock-history"></i> История запросов</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="historyList" class="list-group">
-                            <p class="text-muted text-center">Загрузка...</p>
-                        </div>
+                                    <div id="analogsContainer">
+                                        <div class="analog-row row g-2 mb-2 align-items-end">
+                                            <div class="col">
+                                                <label class="form-label small">Цена, ₽</label>
+                                                <input type="text" class="form-control form-control-sm price-input" name="analog_price[]" placeholder="4 800 000">
+                                            </div>
+                                            <div class="col">
+                                                <label class="form-label small">Площадь, м²</label>
+                                                <input type="number" class="form-control form-control-sm" name="analog_area[]" placeholder="60" step="0.1" min="1">
+                                            </div>
+                                            <div class="col-auto">
+                                                <button type="button" class="btn btn-sm btn-outline-danger btn-remove-analog" title="Удалить">✕</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="btnAddAnalog">
+                                        + Добавить аналог
+                                    </button>
+                                </div>
+
+                                <!-- Автоматический поиск -->
+                                <div class="tab-pane fade" id="mode-auto" role="tabpanel">
+                                    <hr>
+                                    <div class="alert alert-info small mb-0">
+                                        <strong>ℹ️ Автоматический режим:</strong> Система найдёт аналоги на Avito по заданным параметрам. Поиск может занять 1–3 минуты.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Кнопка отправки -->
+                            <div class="d-grid mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg" id="btnSubmit">
+                                    <span class="spinner-border spinner-border-sm d-none me-2" id="submitSpinner"></span>
+                                    <span id="submitText">Рассчитать</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Футер -->
-    <footer class="container py-3 text-center text-muted border-top mt-auto">
-        <small>Квартира-Компаратор &copy; 2024 | Данные из открытых источников | Только для образовательных целей</small>
+    <!-- Модальное окно: Статус обработки -->
+    <div class="modal fade" id="processingModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content text-center p-4">
+                <div class="spinner-border text-primary mx-auto mb-3" role="status"></div>
+                <p class="mb-1 fw-semibold">Идёт поиск аналогов...</p>
+                <p class="small text-muted" id="processingStatus">Подключение к Avito</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно: История -->
+    <div class="modal fade" id="historyModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">📋 История запросов</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="historyBody">
+                    <div class="text-center text-muted py-4">Загрузка...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center text-muted py-3 small">
+        © 2024 Квартира-Компаратор · Красноярск
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <script src="/static/app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

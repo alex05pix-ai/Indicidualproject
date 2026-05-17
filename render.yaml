@@ -1,19 +1,18 @@
-# Render.com — Python runtime (без Docker)
+# ============================================
+# Render.com — Deployment Configuration
+# Квартира-Компаратор
+# ============================================
+
 services:
   - type: web
     name: kvartira-comparator
     runtime: python
-    plan: free
     region: frankfurt
-    branch: feature/kvartira-comparator
-    autoDeploy: true
+    branch: main
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --worker-class eventlet --workers 1 --bind 0.0.0.0:$PORT --timeout 120 app.main:app
-    healthCheckPath: /
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --timeout 120 app.main:app
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.7"
       - key: APP_SECRET_KEY
         generateValue: true
-      - key: APP_DATABASE_URL
-        value: "sqlite:///data/app.db"

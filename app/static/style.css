@@ -1,203 +1,251 @@
 /* ============================================
-   Квартира-Компаратор — Основные стили
-   Адаптивный дизайн, mobile-first
-   Тёмная/светлая тема через data-bs-theme
+   Квартира-Компаратор — Stylesheet
    ============================================ */
 
-/* === Переменные === */
-:root {
-    --transition-speed: 0.3s;
+/* --- Base & Transitions --- */
+* {
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-/* === Базовые стили === */
 body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    transition: background-color var(--transition-speed), color var(--transition-speed);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 main {
     flex: 1;
 }
 
-/* === Навбар === */
-.navbar {
-    backdrop-filter: blur(10px);
-    background-color: rgba(var(--bs-body-bg-rgb, 255, 255, 255), 0.9) !important;
-    border-bottom: 1px solid var(--bs-border-color);
+/* --- Navbar --- */
+.navbar-brand {
+    font-size: 1.1rem;
 }
 
-[data-bs-theme="dark"] .navbar {
-    background-color: rgba(33, 37, 41, 0.9) !important;
-}
-
-/* === Карточки метрик === */
+/* --- Metric Cards --- */
 .metric-card {
     border: none;
-    background: var(--bs-body-bg);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
-/* === Таблица === */
-.table-responsive {
-    border-radius: 0 0 0.375rem 0.375rem;
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
 }
 
-.user-row {
-    border-left: 4px solid var(--bs-info) !important;
+.metric-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-/* Скрываем десктоп-таблицу на мобильных */
-@media (max-width: 767.98px) {
-    .table-responsive {
-        display: none;
-    }
-    #mobileCards {
-        display: block !important;
-    }
-}
-
-@media (min-width: 768px) {
-    #mobileCards {
-        display: none !important;
-    }
-}
-
-/* === Форма === */
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
-}
-
-/* === Прогресс-бар === */
-.progress {
-    border-radius: 1rem;
+/* --- Cards --- */
+.card {
+    border: none;
+    border-radius: 0.75rem;
     overflow: hidden;
 }
 
-.progress-bar {
-    transition: width 0.5s ease;
+.card-header {
+    background: transparent;
+    border-bottom: 1px solid var(--bs-border-color);
 }
 
-/* === Анимации === */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+/* --- Form --- */
+.form-control:focus,
+.form-select:focus {
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
 }
 
-.card {
-    animation: fadeIn 0.3s ease;
+/* --- Analog Rows --- */
+.analog-row {
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background: var(--bs-tertiary-bg);
 }
 
-/* === Кнопка смены темы === */
-#themeToggle {
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.analog-row:hover {
+    background: var(--bs-secondary-bg);
 }
 
-/* === Адаптивные карточки для мобильных === */
-#mobileCards .card {
+/* --- Chart --- */
+.chart-container {
+    position: relative;
+    width: 100%;
+    max-height: 300px;
+}
+
+.chart-container canvas {
+    max-height: 300px;
+}
+
+/* --- Table --- */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table th {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+}
+
+.table td {
+    vertical-align: middle;
+    font-size: 0.9rem;
+}
+
+/* --- Badges --- */
+.badge {
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+/* --- Alerts --- */
+.alert {
+    border-radius: 0.5rem;
+    border: none;
+}
+
+/* --- Buttons --- */
+.btn {
     border-radius: 0.5rem;
 }
 
-/* === Гистограмма === */
-#priceChart {
-    width: 100% !important;
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
 }
 
-/* === Экран загрузки === */
-#loadingScreen {
-    animation: fadeIn 0.5s ease;
+/* --- Spinner --- */
+.spinner-border-sm {
+    width: 1rem;
+    height: 1rem;
 }
 
-/* === Печать === */
-@media print {
-    .navbar, footer, #themeToggle, .btn, .toast-container {
-        display: none !important;
-    }
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #dee2e6 !important;
-    }
+/* --- Dark Theme Adjustments --- */
+[data-bs-theme="dark"] .metric-card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-/* === Маленькие экраны (320px) === */
-@media (max-width: 374px) {
-    .container {
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
+[data-bs-theme="dark"] .metric-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+[data-bs-theme="dark"] .analog-row {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+[data-bs-theme="dark"] .analog-row:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* --- Responsive --- */
+
+/* Mobile (320px+) */
+@media (max-width: 575.98px) {
+    .metric-value {
+        font-size: 1.1rem;
     }
-    h1, .h3 {
-        font-size: 1.3rem;
+
+    .metric-label {
+        font-size: 0.65rem;
     }
+
+    .navbar-brand {
+        font-size: 0.95rem;
+    }
+
+    .table th,
+    .table td {
+        font-size: 0.75rem;
+        padding: 0.4rem;
+    }
+
     .card-body {
-        padding: 0.75rem;
+        padding: 1rem;
     }
-    .metric-card .h5 {
+
+    h5.card-title {
         font-size: 1rem;
     }
 }
 
-/* === Большие экраны (4K) === */
+/* Tablet */
+@media (min-width: 576px) and (max-width: 991.98px) {
+    .metric-value {
+        font-size: 1.3rem;
+    }
+}
+
+/* Large screens (4K) */
 @media (min-width: 2560px) {
     .container {
         max-width: 1600px;
     }
+
+    .metric-value {
+        font-size: 2rem;
+    }
+
+    .metric-label {
+        font-size: 0.9rem;
+    }
+
     body {
         font-size: 1.1rem;
     }
 }
 
-/* === Ссылки в таблице === */
-.table a.btn {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.75rem;
-}
+/* --- Print Styles --- */
+@media print {
+    .navbar,
+    footer,
+    #btnThemeToggle,
+    #btnExportCSV,
+    #btnShare,
+    .btn-outline-primary,
+    .btn-outline-secondary,
+    .modal {
+        display: none !important;
+    }
 
-/* === Toast уведомления === */
-.toast {
-    border: none;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
+    body {
+        font-size: 11pt;
+        color: #000 !important;
+        background: #fff !important;
+    }
 
-/* === Скроллбар для тёмной темы === */
-[data-bs-theme="dark"] ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+        break-inside: avoid;
+    }
 
-[data-bs-theme="dark"] ::-webkit-scrollbar-track {
-    background: #1a1a2e;
-}
+    .metric-card {
+        border: 1px solid #ccc !important;
+    }
 
-[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
-    background: #4a4a6a;
-    border-radius: 4px;
-}
+    .table {
+        font-size: 9pt;
+    }
 
-/* === Badge стили === */
-.badge {
-    font-weight: 500;
-}
+    .chart-container {
+        max-height: 250px;
+    }
 
-/* === История (модальное окно) === */
-#historyList .list-group-item {
-    transition: background-color 0.2s;
-}
-
-#historyList .list-group-item:hover {
-    background-color: var(--bs-tertiary-bg);
+    main {
+        padding: 0 !important;
+    }
 }

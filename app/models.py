@@ -1,196 +1,97 @@
-"""
-Модели базы данных для приложения Квартира-Компаратор.
-Используется SQLAlchemy ORM с поддержкой SQLite и PostgreSQL.
-"""
-
+"""Модели и работа с БД (SQLite)."""
+import json
+import sqlite3
 import uuid
-from datetime import datetime, timezone
-from typing import Optional
-
-from sqlalchemy import (
-    Column,
-    DateTime,
-    Float,
-    Integer,
-    String,
-    Text,
-    Boolean,
-    JSON,
-    create_engine,
-)
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-
+from datetime import datetime
+from pathlib import Path
 from app.config import config
 
 
-class Base(DeclarativeBase):
-    """Базовый класс для всех моделей."""
-    pass
+def get_db():
+    """Подключение к SQLite."""
+    Path(config.DATABASE).parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(config.DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 
-class SearchQuery(Base):
-    """
-    Модель для хранения истории поисковых запросов пользователей.
-    Каждый запрос сохраняется автоматически для истории и кеширования.
-    """
+def init_db():
+    """Создание таблиц."""
+    conn = get_db()
+    conn.executescript("""
+        CREATE TABLE IF NOT EXISTS searches (
+            id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            address TEXT NOT NULL,
+            district TEXT,
+            rooms TEXT NOT NULL,
+            price INTEGER NOT NULL,
+            total_area REAL,
+            floor INTEGER,
+            year_built INTEGER,
+            results_json TEXT,
+            analytics_json TEXT,
+            status TEXT DEFAULT 'pending'
+        );
+    """)
+    conn.commit()
+    conn.close()
 
-    __tablename__ = "search_queries"
 
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    public_id: str = Column(
-        String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4())
+def save_search(data: dict) -> str:
+    """Сохраняет поисковый запрос."""
+    search_id = str(uuid.uuid4())[:8]
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO searches (id, created_at, address, district, rooms, price, total_area, floor, year_built, status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')""",
+        (search_id, datetime.now().isoformat(), data["address"], data.get("district"),
+         data["rooms"], data["price"], data.get("total_area"), data.get("floor"), data.get("year_built"))
     )
-    created_at: datetime = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
+    conn.commit()
+    conn.close()
+    return search_id
+
+
+def update_search_results(search_id: str, results: list, analytics: dict):
+    """Обновляет результаты поиска."""
+    conn = get_db()
+    conn.execute(
+        "UPDATE searches SET results_json=?, analytics_json=?, status='completed' WHERE id=?",
+        (json.dumps(results, ensure_ascii=False), json.dumps(analytics, ensure_ascii=False), search_id)
     )
-    expires_at: datetime = Column(DateTime, nullable=True)
-
-    # Параметры поиска пользователя
-    address: str = Column(String(500), nullable=False)
-    district: str = Column(String(200), nullable=True)
-    rooms: str = Column(String(10), nullable=False)  # "studio", "1", "2", "3", "4+"
-    total_area: Optional[float] = Column(Float, nullable=True)
-    kitchen_area: Optional[float] = Column(Float, nullable=True)
-    floor: Optional[int] = Column(Integer, nullable=True)
-    total_floors: Optional[int] = Column(Integer, nullable=True)
-    year_built: Optional[int] = Column(Integer, nullable=True)
-    price: int = Column(Integer, nullable=False)
-
-    # Фильтры
-    area_tolerance: float = Column(Float, nullable=False, default=0.15)
-    max_distance_km: float = Column(Float, nullable=False, default=2.0)
-    search_depth: int = Column(Integer, nullable=False, default=10)
-
-    # Координаты пользовательского адреса
-    user_lat: Optional[float] = Column(Float, nullable=True)
-    user_lon: Optional[float] = Column(Float, nullable=True)
-
-    # Результаты (JSON для гибкости хранения)
-    results_json: Optional[str] = Column(Text, nullable=True)
-    analytics_json: Optional[str] = Column(Text, nullable=True)
-
-    # Статус запроса
-    status: str = Column(
-        String(20), nullable=False, default="pending"
-    )  # pending, processing, completed, error
-    error_message: Optional[str] = Column(Text, nullable=True)
-    analogs_count: int = Column(Integer, nullable=False, default=0)
-
-    def __repr__(self) -> str:
-        return (
-            f"<SearchQuery(id={self.id}, address='{self.address}', "
-            f"rooms='{self.rooms}', status='{self.status}')>"
-        )
+    conn.commit()
+    conn.close()
 
 
-class CachedGeocode(Base):
-    """
-    Кеш результатов геокодирования.
-    Хранит координаты для адресов, чтобы не обращаться к Nominatim повторно.
-    """
-
-    __tablename__ = "cached_geocodes"
-
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    address: str = Column(String(500), unique=True, nullable=False, index=True)
-    latitude: Optional[float] = Column(Float, nullable=True)
-    longitude: Optional[float] = Column(Float, nullable=True)
-    resolved: bool = Column(Boolean, nullable=False, default=False)
-    created_at: datetime = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-
-    def __repr__(self) -> str:
-        return (
-            f"<CachedGeocode(address='{self.address}', "
-            f"lat={self.latitude}, lon={self.longitude})>"
-        )
+def update_search_error(search_id: str, error: str):
+    """Обновляет статус ошибки."""
+    conn = get_db()
+    conn.execute("UPDATE searches SET status='error', analytics_json=? WHERE id=?",
+                 (json.dumps({"error": error}, ensure_ascii=False), search_id))
+    conn.commit()
+    conn.close()
 
 
-class CachedListing(Base):
-    """
-    Кеш объявлений с Avito.
-    Хранит распарсенные данные объявлений для снижения нагрузки.
-    """
-
-    __tablename__ = "cached_listings"
-
-    id: int = Column(Integer, primary_key=True, autoincrement=True)
-    avito_url: str = Column(String(1000), unique=True, nullable=False, index=True)
-    created_at: datetime = Column(
-        DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
-    )
-
-    # Данные объявления
-    title: str = Column(String(500), nullable=True)
-    rooms: Optional[str] = Column(String(10), nullable=True)
-    address: Optional[str] = Column(String(500), nullable=True)
-    price: Optional[int] = Column(Integer, nullable=True)
-    total_area: Optional[float] = Column(Float, nullable=True)
-    kitchen_area: Optional[float] = Column(Float, nullable=True)
-    living_area: Optional[float] = Column(Float, nullable=True)
-    floor: Optional[int] = Column(Integer, nullable=True)
-    total_floors: Optional[int] = Column(Integer, nullable=True)
-    house_type: Optional[str] = Column(String(100), nullable=True)
-    year_built: Optional[int] = Column(Integer, nullable=True)
-
-    # Координаты
-    latitude: Optional[float] = Column(Float, nullable=True)
-    longitude: Optional[float] = Column(Float, nullable=True)
-
-    def to_dict(self) -> dict:
-        """Конвертация в словарь для JSON-сериализации."""
-        return {
-            "title": self.title,
-            "rooms": self.rooms,
-            "address": self.address,
-            "price": self.price,
-            "total_area": self.total_area,
-            "kitchen_area": self.kitchen_area,
-            "living_area": self.living_area,
-            "floor": self.floor,
-            "total_floors": self.total_floors,
-            "house_type": self.house_type,
-            "year_built": self.year_built,
-            "url": self.avito_url,
-            "latitude": self.latitude,
-            "longitude": self.longitude,
-        }
-
-    def __repr__(self) -> str:
-        return f"<CachedListing(url='{self.avito_url[:50]}...', price={self.price})>"
+def get_search(search_id: str) -> dict:
+    """Получает результаты поиска."""
+    conn = get_db()
+    row = conn.execute("SELECT * FROM searches WHERE id=?", (search_id,)).fetchone()
+    conn.close()
+    if not row:
+        return None
+    result = dict(row)
+    result["results"] = json.loads(result["results_json"]) if result["results_json"] else []
+    result["analytics"] = json.loads(result["analytics_json"]) if result["analytics_json"] else {}
+    return result
 
 
-# === Инициализация БД ===
-
-def get_engine():
-    """Создаёт и возвращает engine SQLAlchemy."""
-    return create_engine(
-        config.DATABASE_URL,
-        echo=config.DEBUG,
-        pool_pre_ping=True,
-    )
-
-
-def get_session_factory():
-    """Возвращает фабрику сессий."""
-    engine = get_engine()
-    return sessionmaker(bind=engine)
-
-
-def init_db() -> None:
-    """
-    Инициализирует базу данных — создаёт все таблицы.
-    Вызывать при старте приложения.
-    """
-    engine = get_engine()
-    Base.metadata.create_all(engine)
-
-
-def get_db_session() -> Session:
-    """
-    Создаёт и возвращает новую сессию БД.
-    Используйте как контекстный менеджер или закрывайте вручную.
-    """
-    SessionFactory = get_session_factory()
-    return SessionFactory()
+def get_history(limit=10) -> list:
+    """Последние поиски."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT id, created_at, address, rooms, price, status FROM searches ORDER BY created_at DESC LIMIT ?",
+        (limit,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
