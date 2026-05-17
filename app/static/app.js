@@ -106,7 +106,6 @@ async function handleSearchSubmit(e) {
         price: document.getElementById('price').value.replace(/[^\d]/g, ''),
         total_area: document.getElementById('total_area').value || null,
         floor: document.getElementById('floor').value || null,
-        total_floors: document.getElementById('total_floors').value || null,
         year_built: document.getElementById('year_built').value || null,
         area_tolerance: (parseFloat(document.getElementById('area_tolerance').value) || 15) / 100,
         max_distance: parseFloat(document.getElementById('max_distance').value) || 2.0,
@@ -181,7 +180,6 @@ async function handleAutofill() {
             }
             if (data.total_area) document.getElementById('total_area').value = data.total_area;
             if (data.floor) document.getElementById('floor').value = data.floor;
-            if (data.total_floors) document.getElementById('total_floors').value = data.total_floors;
             if (data.year_built) document.getElementById('year_built').value = data.year_built;
 
             showAlert('Данные заполнены из объявления!', 'success');
