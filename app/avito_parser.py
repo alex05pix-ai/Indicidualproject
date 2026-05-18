@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://www.avito.ru"
 
 
-def build_url(rooms: str, page: int = 1, min_price: int = None, max_price: int = None) -> str:
-    """Строит URL поиска на Avito по количеству комнат."""
+def build_url(rooms: str, page: int = 1, min_price: int = None, max_price: int = None, district: str = None) -> str:
+    """Строит URL поиска на Avito по количеству комнат + район в запросе."""
     rooms_map = {"studio": "studii", "1": "1-komnatnye", "2": "2-komnatnye",
                  "3": "3-komnatnye", "4+": "4-komnatnye"}
     segment = rooms_map.get(rooms, "1-komnatnye")
@@ -30,6 +30,10 @@ def build_url(rooms: str, page: int = 1, min_price: int = None, max_price: int =
         params.append(f"pmax={max_price}")
     if page > 1:
         params.append(f"p={page}")
+    # Добавляем район/микрорайон в текстовый поиск
+    if district:
+        from urllib.parse import quote
+        params.append(f"q={quote(district)}")
     return url + ("?" + "&".join(params) if params else "")
 
 
